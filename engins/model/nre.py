@@ -1,5 +1,5 @@
 from abc import ABC
-
+import configparser
 import tensorflow as tf
 import tensorflow.keras.backend as K
 from data import DataProcessor
@@ -10,29 +10,22 @@ from tensorflow.keras import regularizers
 class NREModel(tf.keras.Model, ABC):
     def __init__(self, data_processor):
         super(NREModel, self).__init__()
+        config = configparser.ConfigParser()
+        config.read('./config/config.ini')
+        self.max_seq_length = config.getint('ner', 'max_sequence_length')
         self.class_num = len(data_processor.predicate_classes)
         self.entity_class_num = len(data_processor.class2id)
         self.voc_size = 8180
-        self.max_seq_length = 150
-        self.embedding_dim = 150
-        self.batch_size = 64
-        self.filter_nums = 32
+        self.batch_size = config.getint('ner', 'batch_size')
+        self.is_early_stop = config.getboolean('ner', 'is_early_stop')
+        self.patient = config.getint('ner', 'patient')
+        self.embedding_method = config.get('ner', 'embedding_method')
+        self.embedding_dim = config.getint('ner', 'embedding_dim')
         self.embedding = tf.keras.layers.Embedding(input_length=self.max_seq_length, input_dim=self.voc_size + 1,
                                                    output_dim=self.embedding_dim)
-        self.conv2d_1 = tf.keras.layers.Conv2D(filters=self.filter_nums, kernel_size=2, padding='valid')
-        self.pooling_1 = tf.keras.layers.MaxPooling2D(pool_size=self.max_seq_length - 2 + 1, padding='valid')
-
-        self.conv2d_2 = tf.keras.layers.Conv2D(filters=self.filter_nums, kernel_size=3, padding='valid')
-        self.pooling_2 = tf.keras.layers.MaxPooling2D(pool_size=self.max_seq_length - 3 + 1, padding='valid')
-
-        self.conv2d_3 = tf.keras.layers.Conv2D(filters=self.filter_nums, kernel_size=4, padding='valid')
-        self.pooling_3 = tf.keras.layers.MaxPooling2D(pool_size=self.max_seq_length - 4 + 1, padding='valid')
-
-        self.dense_1 = tf.keras.layers.Dense(units=2, activation='sigmoid')
-
         # pointer model
-        hidden_dim = 32
-        self.bilstm = tf.keras.layers.LSTM(units=hidden_dim, activation='tanh', return_sequences=True)
+        self.hidden_dim = config.getint('ner', 'hidden_dim')
+        self.bilstm = tf.keras.layers.LSTM(units=self.hidden_dim, activation='tanh', return_sequences=True)
         self.dense = tf.keras.layers.Dense(units=2 * self.entity_class_num, activation=None,
                                            kernel_regularizer=regularizers.l2(0.001))
         self.flatten = tf.keras.layers.Flatten(name='flatten')

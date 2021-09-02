@@ -1,8 +1,8 @@
-model_checkpoint_path: "bilstm_crf-19"
-all_model_checkpoint_paths: "bilstm_crf-17"
+model_checkpoint_path: "bilstm_crf-1"
 all_model_checkpoint_paths: "bilstm_crf-18"
 all_model_checkpoint_paths: "bilstm_crf-19"
-all_model_checkpoint_timestamps: 1630431929.8494172
+all_model_checkpoint_paths: "bilstm_crf-1"
 all_model_checkpoint_timestamps: 1630432056.5045583
 all_model_checkpoint_timestamps: 1630432183.3801107
+all_model_checkpoint_timestamps: 1630591747.782383
 last_preserved_timestamp: 1629550909.8690357
