@@ -22,6 +22,7 @@ class DataProcessor():
         self.token2id = dict(zip(list(token2id_data.token), list(token2id_data.id)))
         self.id2token = dict(zip(list(token2id_data.id), list(token2id_data.token)))
         self.class2id = dict(zip(list(entity.label), list(entity.id)))
+        self.id2class = dict(zip(list(entity.id), list(entity.label)))
         self.PADDING = '[PAD]'
         self.UNKNOWN = '[UNK]'
         # print(self.token2id)

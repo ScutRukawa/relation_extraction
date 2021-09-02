@@ -10,14 +10,12 @@ import math
 from data import DataProcessor
 from engins.train import TrainProcessor
 from predict import Predictor
-
+import pandas as pd
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     trainProcessor = TrainProcessor()
+    # dataProcessor=DataProcessor()
     trainProcessor.train()
-    res = []
-    test = ([111, 222], [333, 444])
-    for x, y in zip(*test):
-        print(x, y)
-        res.append([x, ['y']])
-    print(res)
+
+
+

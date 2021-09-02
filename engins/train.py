@@ -1,4 +1,6 @@
 import configparser
+import json
+
 from data import DataProcessor
 from tensorflow.keras import optimizers, metrics
 from tqdm import tqdm
@@ -8,7 +10,8 @@ from tensorflow_addons.text import crf_decode
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.losses import BinaryCrossentropy
 import numpy as np
-from engins.metrics import extract_entity
+from engins.metrics import evaluate
+from tensorflow_addons.losses import sigmoid_focal_crossentropy
 
 
 class TrainProcessor:
@@ -17,9 +20,9 @@ class TrainProcessor:
         config = configparser.ConfigParser()
         config.read('./config/config.ini')
         if config.get('ner', 'optimizers') == 'Adam':
-            self.optimizers = optimizers.Adam(lr=0.0001)
+            self.optimizers = optimizers.Adam(lr=0.01)
         else:
-            self.optimizers = optimizers.RMSprop(lr=0.0001)
+            self.optimizers = optimizers.RMSprop(lr=0.01)
         self.epochs = config.getint('ner', 'epochs')
         self.batch_size = config.getint('ner', 'batch_size')
         self.max_sequence_length = config.getint('ner', 'max_sequence_length')
@@ -45,30 +48,36 @@ class TrainProcessor:
         for epoch in range(self.epochs):
             # 重新打乱
             sample_num = len(X_train)
-            train_batch = tf.data.Dataset.from_tensor_slices((X_train[0:5000], y_train[0:5000])).shuffle(
+            train_batch = tf.data.Dataset.from_tensor_slices((X_train[0:20000], y_train[0:20000])).shuffle(
                 sample_num).batch(
                 batch_size=self.batch_size)
-            loss_func = BinaryCrossentropy(from_logits=True)
             for step, (X, y) in tqdm(train_batch.enumerate(), desc='epoch:' + str(epoch)):
                 with tf.GradientTape() as tape:
-                    logits = model(X, training=True)
-                    loss = loss_func(logits, y)
-                grads = tape.gradient(loss, model.trainable_variables)
+                    output = model(X, training=True)
+                    y = tf.cast(y, dtype=tf.float32)
+                    loss = sigmoid_focal_crossentropy(y, output)
+                    loss_class = tf.reduce_mean(loss, axis=-1)
+                    loss_sentence = tf.reduce_sum(loss_class, axis=-1)
+                    loss_sum = tf.reduce_sum(loss_sentence, axis=-1)
+                grads = tape.gradient(loss_sum, model.trainable_variables)
                 self.optimizers.apply_gradients(zip(grads, model.trainable_variables))
 
             count = 0.0
-            loss = 0.
-            dev_batch = tf.data.Dataset.from_tensor_slices((X_dev[0:100], y_dev[0:100])).batch(
+            loss_sum = 0.
+            dev_batch = tf.data.Dataset.from_tensor_slices((X_dev[0:1000], y_dev[0:1000])).batch(
                 batch_size=self.batch_size)
             for step, (X, y) in dev_batch.enumerate():
                 count += 1
-                logits = model(X, training=False)
-                pred = tf.sigmoid(logits)
-                entity_set = extract_entity(pred, X, data_processor)
-                if len(entity_set[1])!=0:
-                    for entity in entity_set:
-                        print(entity)
-                loss += loss_func(logits, y)
-
-            print("epoch %d : %f" % (epoch, loss / count))
+                output = model(X, training=False)
+                y = tf.cast(y, dtype=tf.float32)
+                loss = sigmoid_focal_crossentropy(y, output)
+                loss_class = tf.reduce_mean(loss, axis=-1)
+                loss_sentence = tf.reduce_sum(loss_class, axis=-1)
+                loss_sum += tf.reduce_sum(loss_sentence, axis=-1)
+            metrics_entity = evaluate(model, data_processor)
+            print("epoch %d : %f" % (epoch, loss_sum / count))
+            print(metrics_entity)
             checkpoint_manager.save()
+
+    def pprint(self, pred):
+        return

@@ -36,7 +36,7 @@ class NREModel(tf.keras.Model, ABC):
         self.dense = tf.keras.layers.Dense(units=2 * self.entity_class_num, activation=None,
                                            kernel_regularizer=regularizers.l2(0.001))
         self.flatten = tf.keras.layers.Flatten(name='flatten')
-        self.layer_norm=tf.keras.layers.LayerNormalization(axis=-1)
+        self.layer_norm = tf.keras.layers.LayerNormalization(axis=-1)
 
     def position_embedding(self):
         # 生成sin cos
@@ -71,10 +71,11 @@ class NREModel(tf.keras.Model, ABC):
 
     def call(self, inputs, training=None, mask=None):
         embedding = self.embedding(inputs)
-        embedding=self.layer_norm(embedding)
+        embedding = self.layer_norm(embedding)
         bilstm_out = self.bilstm(embedding)
         # flatten_out = self.flatten(bilstm_out)
         batch_size = inputs.shape[0]
         logits = self.dense(bilstm_out)  # [batch_size,seq_length,class]
-        logits = tf.reshape(logits, [batch_size, -1, self.entity_class_num, 2])
-        return logits
+        output = tf.nn.sigmoid(logits)
+        output = tf.reshape(output, [batch_size, -1, self.entity_class_num, 2])
+        return output
